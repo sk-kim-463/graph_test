@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multiview 6 (Mobile Optimized)</title>
+<title>Multiview 6 + 10분 그래프</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -13,15 +13,14 @@ body {
     font-family: Arial;
 }
 
-/* 전체 레이아웃 */
 .container {
     display: flex;
     flex-wrap: wrap;
 }
 
-/* 영상 영역 */
+/* 2x3 핵심 */
 .video-wrapper {
-    width: 50%; /* 핵심: 2열 */
+    width: 50%;
     padding: 2px;
     box-sizing: border-box;
 }
@@ -38,7 +37,6 @@ body {
     height: 100%;
 }
 
-/* 시청자 수 */
 .text-box {
     text-align: center;
     font-size: 14px;
@@ -46,10 +44,10 @@ body {
     padding: 4px;
 }
 
-/* 그래프 영역 */
+/* 그래프 */
 .chart-container {
     width: 100%;
-    height: 250px;
+    height: 260px;
     padding: 10px;
 }
 </style>
@@ -62,42 +60,42 @@ body {
 <!-- 6개 영상 -->
 <div class="video-wrapper">
     <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/NJUjU9ALj4A?autoplay=1&mute=1" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/NJUjU9ALj4A?autoplay=1&mute=1"></iframe>
     </div>
     <div class="text-box" id="v1"></div>
 </div>
 
 <div class="video-wrapper">
     <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/lb1oB2feqkQ?autoplay=1&mute=1" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/lb1oB2feqkQ?autoplay=1&mute=1"></iframe>
     </div>
     <div class="text-box" id="v2"></div>
 </div>
 
 <div class="video-wrapper">
     <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/yhpbioCP6nA?autoplay=1&mute=1" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/yhpbioCP6nA?autoplay=1&mute=1"></iframe>
     </div>
     <div class="text-box" id="v3"></div>
 </div>
 
 <div class="video-wrapper">
     <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/s9xL1DpBsfQ?autoplay=1&mute=1" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/s9xL1DpBsfQ?autoplay=1&mute=1"></iframe>
     </div>
     <div class="text-box" id="v4"></div>
 </div>
 
 <div class="video-wrapper">
     <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/5cFoz90FUMk?autoplay=1&mute=1" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/5cFoz90FUMk?autoplay=1&mute=1"></iframe>
     </div>
     <div class="text-box" id="v5"></div>
 </div>
 
 <div class="video-wrapper">
     <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/w05Ejc0iOVI?autoplay=1&mute=1" allowfullscreen></iframe>
+        <iframe src="https://www.youtube.com/embed/w05Ejc0iOVI?autoplay=1&mute=1"></iframe>
     </div>
     <div class="text-box" id="v6"></div>
 </div>
@@ -110,8 +108,9 @@ body {
 </div>
 
 <script>
-const apiKey = 'AIzaSyD5VgaH9IPJteplU0ynPb9WvjmJPODEW0E';
+const apiKey = "YOUR_API_KEY";
 
+/* 영상 정보 */
 const videoIds = [
     'NJUjU9ALj4A',
     'lb1oB2feqkQ',
@@ -130,30 +129,43 @@ const names = [
     '토마토증권통'
 ];
 
+/* 색상 */
+const colors = [
+    '#e41a1c',
+    '#377eb8',
+    '#4daf4a',
+    '#984ea3',
+    '#ff7f00',
+    '#f1c40f'
+];
+
 /* 그래프 데이터 */
 const labels = [];
 const dataSets = videoIds.map(() => []);
+
+/* 시작시간 */
+const startTime = Date.now();
+
+/* 10분 유지 (20초 간격 → 30개) */
+const MAX_POINTS = 30;
 
 /* 차트 생성 */
 const chart = new Chart(document.getElementById('chart'), {
     type: 'line',
     data: {
         labels: labels,
-        datasets: [
-            { label: names[0], data: dataSets[0], borderColor:'#e41a1c' },
-            { label: names[1], data: dataSets[1], borderColor:'#377eb8' },
-            { label: names[2], data: dataSets[2], borderColor:'#4daf4a' },
-            { label: names[3], data: dataSets[3], borderColor:'#984ea3' },
-            { label: names[4], data: dataSets[4], borderColor:'#ff7f00' },
-            { label: names[5], data: dataSets[5], borderColor:'#f1c40f' }
-        ]
+        datasets: names.map((name, i) => ({
+            label: name,
+            data: dataSets[i],
+            borderColor: colors[i],
+            borderWidth: 2,
+            tension: 0.3,
+            pointRadius: 2
+        }))
     },
     options: {
         responsive: true,
         animation: false,
-        elements: {
-            point: { radius: 2 }
-        },
         plugins: {
             legend: { position: 'bottom' }
         },
@@ -163,14 +175,26 @@ const chart = new Chart(document.getElementById('chart'), {
     }
 });
 
-/* 데이터 가져오기 */
+/* 시간 포맷 */
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/* 업데이트 */
 async function update() {
-    const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${videoIds.join(',')}&key=${apiKey}`);
+
+    const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${videoIds.join(',')}&key=${apiKey}`
+    );
+
     const data = await res.json();
 
-    const now = new Date().toLocaleTimeString();
+    const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
 
-    labels.push(now);
+    /* X축 (경과시간) */
+    labels.push(formatTime(elapsedSec));
 
     data.items.forEach((item, i) => {
         const viewers = item.liveStreamingDetails?.concurrentViewers || 0;
@@ -181,8 +205,8 @@ async function update() {
         dataSets[i].push(viewers);
     });
 
-    /* 데이터 길이 제한 */
-    if (labels.length > 20) {
+    /* 10분 유지 */
+    if (labels.length > MAX_POINTS) {
         labels.shift();
         dataSets.forEach(arr => arr.shift());
     }
@@ -190,8 +214,10 @@ async function update() {
     chart.update();
 }
 
+/* 실행 */
 update();
 setInterval(update, 20000);
+
 </script>
 
 </body>
