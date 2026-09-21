@@ -1,222 +1,1323 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multiview 6 + 10분 그래프</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3 YouTube Views + Viewers + Live Chat + Graph</title>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-body {
-    margin: 0;
-    font-family: Arial;
-}
+  <style>
+    :root {
+      --gap: 12px;
+      --chat-height: 420px;
+      --bg: #0b0b0b;
+      --panel: #141414;
+      --border: #232323;
+      --text: #eeeeee;
+      --green: #62e98b;
+      --blue: #4d8cff;
+      --orange: #ff934d;
+    }
 
-.container {
-    display: flex;
-    flex-wrap: wrap;
-}
+    * {
+      box-sizing: border-box;
+    }
 
-/* 2x3 핵심 */
-.video-wrapper {
-    width: 50%;
-    padding: 2px;
-    box-sizing: border-box;
-}
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Noto Sans KR", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
 
-.video-container {
-    position: relative;
-    padding-bottom: 56.25%;
-    height: 0;
-}
+    /* =========================
+       전체 3열
+    ========================= */
 
-.video-container iframe {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-}
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(320px, 1fr));
+      gap: var(--gap);
+      padding: var(--gap);
+    }
 
-.text-box {
-    text-align: center;
-    font-size: 14px;
-    background: #f0f0f0;
-    padding: 4px;
-}
+    .tile {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      min-width: 0;
+    }
 
-/* 그래프 */
-.chart-container {
-    width: 100%;
-    height: 260px;
-    padding: 10px;
-}
-</style>
+    /* =========================
+       영상
+    ========================= */
+
+    .video-container {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      background: #000;
+    }
+
+    .video-container iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    /* =========================
+       채널명 / 동접자
+    ========================= */
+
+    .meta {
+      padding: 10px 12px 6px 12px;
+      min-height: 48px;
+    }
+
+    .meta-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+    }
+
+    .name-line {
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      padding: 0 80px;
+    }
+
+    .name-line .count {
+      font-weight: 700;
+      color: #b7f397;
+    }
+
+    /* 한국경제TV에만 존재 */
+    .graph-button {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+
+      border: 0;
+      border-radius: 8px;
+      padding: 7px 14px;
+
+      background: #2468e8;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .graph-button:hover {
+      background: #3479fa;
+    }
+
+    .graph-button:active {
+      transform: translateY(-50%) scale(0.97);
+    }
+
+    /* =========================
+       채팅
+    ========================= */
+
+    .chat {
+      padding: 8px 12px 12px 12px;
+    }
+
+    .chat iframe {
+      width: 100%;
+      height: var(--chat-height);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+    }
+
+    /* =========================
+       그래프 모드
+    ========================= */
+
+    .graph-area {
+      display: none;
+      grid-template-columns: 1fr 2fr;
+      gap: var(--gap);
+      padding:
+        0
+        var(--gap)
+        var(--gap)
+        var(--gap);
+    }
+
+    .graph-card {
+      background: #101418;
+      border: 1px solid #303942;
+      border-radius: 12px;
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .graph-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .graph-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .graph-current {
+      color: var(--green);
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .graph-canvas-box {
+      position: relative;
+      height: var(--chat-height);
+    }
+
+    .graph-canvas-box canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .graph-footer {
+      padding-top: 8px;
+      font-size: 12px;
+      color: #9ca7b2;
+      text-align: right;
+    }
+
+    /* =========================
+       Graph 모드 전환
+    ========================= */
+
+    body.graph-mode .chat {
+      display: none;
+    }
+
+    body.graph-mode .graph-area {
+      display: grid;
+    }
+
+    /* =========================
+       반응형
+    ========================= */
+
+    @media (max-width: 1000px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .graph-area {
+        grid-template-columns: 1fr;
+      }
+
+      .name-line {
+        padding: 0 75px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<div class="container">
+  <!-- =====================================================
+       영상 영역
+  ====================================================== -->
 
-<!-- 6개 영상 -->
-<div class="video-wrapper">
-    <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/NJUjU9ALj4A?autoplay=1&mute=1"></iframe>
+  <div class="grid">
+
+    <!-- 한국경제TV -->
+    <div class="tile">
+
+      <div class="video-container">
+        <iframe
+          id="video1"
+          src="https://www.youtube.com/embed/VlaCnp1fxI8?autoplay=1&mute=1&rel=0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+          title="한국경제TV"
+        ></iframe>
+      </div>
+
+      <div class="meta">
+
+        <div class="meta-row">
+
+          <div class="name-line">
+            한국경제TV:
+            <span id="viewers1" class="count">0</span>명
+          </div>
+
+          <!-- Graph 버튼은 한국경제TV에만 -->
+          <button
+            id="graphToggleBtn"
+            class="graph-button"
+            type="button"
+          >
+            Graph
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="chat">
+        <iframe
+          id="chat1"
+          title="한국경제TV 채팅"
+        ></iframe>
+      </div>
+
     </div>
-    <div class="text-box" id="v1"></div>
-</div>
 
-<div class="video-wrapper">
-    <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/lb1oB2feqkQ?autoplay=1&mute=1"></iframe>
+
+    <!-- MTN -->
+    <div class="tile">
+
+      <div class="video-container">
+        <iframe
+          id="video2"
+          src="https://www.youtube.com/embed/lb1oB2feqkQ?autoplay=1&mute=1&rel=0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+          title="MTN"
+        ></iframe>
+      </div>
+
+      <div class="meta">
+
+        <div class="meta-row">
+
+          <div class="name-line">
+            MTN:
+            <span id="viewers2" class="count">0</span>명
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="chat">
+        <iframe
+          id="chat2"
+          title="MTN 채팅"
+        ></iframe>
+      </div>
+
     </div>
-    <div class="text-box" id="v2"></div>
-</div>
 
-<div class="video-wrapper">
-    <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/yhpbioCP6nA?autoplay=1&mute=1"></iframe>
+
+    <!-- 매일경제TV -->
+    <div class="tile">
+
+      <div class="video-container">
+        <iframe
+          id="video3"
+          src="https://www.youtube.com/embed/s9xL1DpBsfQ?autoplay=1&mute=1&rel=0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+          title="매일경제TV"
+        ></iframe>
+      </div>
+
+      <div class="meta">
+
+        <div class="meta-row">
+
+          <div class="name-line">
+            매일경제TV:
+            <span id="viewers3" class="count">0</span>명
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="chat">
+        <iframe
+          id="chat3"
+          title="매일경제TV 채팅"
+        ></iframe>
+      </div>
+
     </div>
-    <div class="text-box" id="v3"></div>
-</div>
 
-<div class="video-wrapper">
-    <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/s9xL1DpBsfQ?autoplay=1&mute=1"></iframe>
+  </div>
+
+
+  <!-- =====================================================
+       그래프 영역
+
+       왼쪽 1/3  : 한국경제TV 단독
+       오른쪽 2/3 : MTN + 매일경제TV 채팅영역을 합친 크기
+                    3개 채널 통합 그래프
+  ====================================================== -->
+
+  <div id="graphArea" class="graph-area">
+
+    <!-- 한국경제TV 단독 그래프 -->
+
+    <div class="graph-card">
+
+      <div class="graph-title-row">
+
+        <div class="graph-title">
+          한국경제TV 실시간 동접자
+          <span style="font-size:12px;color:#9ca7b2;">
+            (최근 1시간)
+          </span>
+        </div>
+
+        <div
+          id="hankyungCurrent"
+          class="graph-current"
+        >
+          현재 0명
+        </div>
+
+      </div>
+
+      <div class="graph-canvas-box">
+        <canvas id="hankyungChart"></canvas>
+      </div>
+
+      <div class="graph-footer">
+        현재 동접자 기준 ±1,000명 · 20초마다 업데이트
+      </div>
+
     </div>
-    <div class="text-box" id="v4"></div>
-</div>
 
-<div class="video-wrapper">
-    <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/5cFoz90FUMk?autoplay=1&mute=1"></iframe>
+
+    <!-- 3채널 통합 그래프 -->
+
+    <div class="graph-card">
+
+      <div class="graph-title-row">
+
+        <div class="graph-title">
+          3개 채널 통합 실시간 동접자
+          <span style="font-size:12px;color:#9ca7b2;">
+            (최근 1시간)
+          </span>
+        </div>
+
+      </div>
+
+      <div class="graph-canvas-box">
+        <canvas id="combinedChart"></canvas>
+      </div>
+
+      <div class="graph-footer">
+        최근 1시간 · 최대 180개 데이터 · 20초마다 업데이트
+      </div>
+
     </div>
-    <div class="text-box" id="v5"></div>
-</div>
 
-<div class="video-wrapper">
-    <div class="video-container">
-        <iframe src="https://www.youtube.com/embed/w05Ejc0iOVI?autoplay=1&mute=1"></iframe>
-    </div>
-    <div class="text-box" id="v6"></div>
-</div>
+  </div>
 
-</div>
-
-<!-- 그래프 -->
-<div class="chart-container">
-    <canvas id="chart"></canvas>
-</div>
 
 <script>
-const apiKey = "AIzaSyB8u0gmJgBgGM9K1W-hF_q1GpOh8uwZw3w";
 
-/* 영상 정보 */
-const videoIds = [
-    'NJUjU9ALj4A',
+  /* =====================================================
+     기본 설정
+  ====================================================== */
+
+  const VIDEO_IDS = [
+    'VlaCnp1fxI8',
     'lb1oB2feqkQ',
-    'yhpbioCP6nA',
-    's9xL1DpBsfQ',
-    '5cFoz90FUMk',
-    'w05Ejc0iOVI'
-];
+    's9xL1DpBsfQ'
+  ];
 
-const names = [
+  const CHANNEL_NAMES = [
     '한국경제TV',
     'MTN',
-    '연합뉴스경제',
-    '매일경제TV',
-    '이데일리TV',
-    '토마토증권통'
-];
+    '매일경제TV'
+  ];
 
-/* 색상 */
-const colors = [
-    '#e41a1c',
-    '#377eb8',
-    '#4daf4a',
-    '#984ea3',
-    '#ff7f00',
-    '#f1c40f'
-];
 
-/* 그래프 데이터 */
-const labels = [];
-const dataSets = videoIds.map(() => []);
+  /*
+     기존 사용 API Key
+     보안을 위해 실제 운영 시에는
+     Google Cloud Console에서 HTTP Referrer 제한 권장
+  */
 
-/* 시작시간 */
-const startTime = Date.now();
+  const API_KEY =
+    'AIzaSyB8u0gmJgBgGM9K1W-hF_q1GpOh8uwZw3w';
 
-/* 10분 유지 (20초 간격 → 30개) */
-const MAX_POINTS = 30;
 
-/* 차트 생성 */
-const chart = new Chart(document.getElementById('chart'), {
-    type: 'line',
-    data: {
-        labels: labels,
-        datasets: names.map((name, i) => ({
-            label: name,
-            data: dataSets[i],
-            borderColor: colors[i],
-            borderWidth: 2,
-            tension: 0.3,
-            pointRadius: 2
-        }))
-    },
-    options: {
-        responsive: true,
-        animation: false,
-        plugins: {
-            legend: { position: 'bottom' }
-        },
-        scales: {
-            y: { beginAtZero: true }
-        }
+  /* =====================================================
+     그래프 설정
+  ====================================================== */
+
+  // 20초
+  const UPDATE_INTERVAL = 20000;
+
+  // 최근 1시간
+  const HISTORY_DURATION = 60 * 60 * 1000;
+
+  // 20초 * 180 = 1시간
+  const MAX_POINTS = 180;
+
+
+  /*
+     각 채널 데이터
+
+     {
+       time : Date
+       value : number
+     }
+  */
+
+  const historyData = [
+    [],
+    [],
+    []
+  ];
+
+
+  let graphMode = false;
+
+  let hankyungChart = null;
+  let combinedChart = null;
+
+
+  /* =====================================================
+     시작
+  ====================================================== */
+
+  document.addEventListener(
+    'DOMContentLoaded',
+    () => {
+
+      setupChat();
+
+      setupGraphButton();
+
+      createCharts();
+
+      /*
+         페이지가 열리자마자 데이터 수집 시작
+
+         Graph 화면을 열지 않아도
+         계속 백그라운드에서 데이터가 쌓임
+      */
+
+      updateViewers();
+
+      setInterval(
+        updateViewers,
+        UPDATE_INTERVAL
+      );
+
     }
-});
+  );
 
-/* 시간 포맷 */
-function formatTime(sec) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
-/* 업데이트 */
-async function update() {
+  /* =====================================================
+     YouTube 채팅
+  ====================================================== */
 
-    const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${videoIds.join(',')}&key=${apiKey}`
+  function setupChat() {
+
+    const domain =
+      location.hostname || 'localhost';
+
+    const chatIframes = [
+      document.getElementById('chat1'),
+      document.getElementById('chat2'),
+      document.getElementById('chat3')
+    ];
+
+
+    VIDEO_IDS.forEach(
+      (vid, i) => {
+
+        chatIframes[i].src =
+          `https://www.youtube.com/live_chat?v=${vid}` +
+          `&embed_domain=${domain}` +
+          `&dark_theme=1`;
+
+      }
     );
 
-    const data = await res.json();
+  }
 
-    const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
 
-    /* X축 (경과시간) */
-    labels.push(formatTime(elapsedSec));
+  /* =====================================================
+     Graph / 채팅창 버튼
+  ====================================================== */
 
-    data.items.forEach((item, i) => {
-        const viewers = item.liveStreamingDetails?.concurrentViewers || 0;
+  function setupGraphButton() {
 
-        document.getElementById('v' + (i+1)).innerText =
-            `${names[i]} : ${Number(viewers).toLocaleString()}명`;
+    const button =
+      document.getElementById(
+        'graphToggleBtn'
+      );
 
-        dataSets[i].push(viewers);
-    });
 
-    /* 10분 유지 */
-    if (labels.length > MAX_POINTS) {
-        labels.shift();
-        dataSets.forEach(arr => arr.shift());
+    button.addEventListener(
+      'click',
+      () => {
+
+        graphMode = !graphMode;
+
+
+        if (graphMode) {
+
+          document.body.classList.add(
+            'graph-mode'
+          );
+
+          button.textContent =
+            '채팅창';
+
+
+          /*
+             display:none 상태에서 생성된 Chart는
+             크기 계산이 제대로 안 될 수 있으므로
+             화면 전환 후 resize
+          */
+
+          setTimeout(
+            () => {
+
+              if (hankyungChart) {
+                hankyungChart.resize();
+              }
+
+              if (combinedChart) {
+                combinedChart.resize();
+              }
+
+              refreshCharts();
+
+            },
+            50
+          );
+
+        }
+        else {
+
+          document.body.classList.remove(
+            'graph-mode'
+          );
+
+          button.textContent =
+            'Graph';
+
+        }
+
+      }
+    );
+
+  }
+
+
+  /* =====================================================
+     동접자 API
+  ====================================================== */
+
+  async function updateViewers() {
+
+    const endpoint =
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=liveStreamingDetails` +
+      `&id=${VIDEO_IDS.join(',')}` +
+      `&key=${API_KEY}`;
+
+
+    try {
+
+      const response =
+        await fetch(endpoint);
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          `HTTP ${response.status}`
+        );
+
+      }
+
+
+      const data =
+        await response.json();
+
+
+      const viewerMap = {};
+
+
+      (data.items || []).forEach(
+        item => {
+
+          const raw =
+            item?.liveStreamingDetails
+                ?.concurrentViewers;
+
+
+          /*
+             값이 존재하는 경우만 저장
+
+             API가 순간적으로 값을 반환하지 않을 경우
+             0으로 떨어뜨리지 않는다.
+          */
+
+          if (
+            raw !== undefined &&
+            raw !== null
+          ) {
+
+            viewerMap[item.id] =
+              Number(raw);
+
+          }
+
+        }
+      );
+
+
+      const now =
+        new Date();
+
+
+      VIDEO_IDS.forEach(
+        (vid, index) => {
+
+          /*
+             이번 API 응답에 값이 없으면
+             기존 표시값을 유지
+          */
+
+          if (
+            viewerMap[vid] === undefined
+          ) {
+
+            return;
+
+          }
+
+
+          const viewers =
+            viewerMap[vid];
+
+
+          updateViewerText(
+            index,
+            viewers
+          );
+
+
+          addHistoryPoint(
+            index,
+            now,
+            viewers
+          );
+
+        }
+      );
+
+
+      /*
+         Graph 화면이 열려 있지 않아도
+         데이터는 계속 쌓인다.
+
+         차트 객체 역시 갱신해 둔다.
+      */
+
+      refreshCharts();
+
+    }
+    catch (error) {
+
+      console.error(
+        '동접자 집계 오류:',
+        error
+      );
+
     }
 
-    chart.update();
-}
+  }
 
-/* 실행 */
-update();
-setInterval(update, 20000);
+
+  /* =====================================================
+     상단 동접자 숫자
+  ====================================================== */
+
+  function updateViewerText(
+    index,
+    viewers
+  ) {
+
+    const el =
+      document.getElementById(
+        `viewers${index + 1}`
+      );
+
+
+    if (!el) {
+      return;
+    }
+
+
+    el.textContent =
+      viewers.toLocaleString('ko-KR');
+
+  }
+
+
+  /* =====================================================
+     그래프 데이터 추가
+  ====================================================== */
+
+  function addHistoryPoint(
+    channelIndex,
+    time,
+    value
+  ) {
+
+    const list =
+      historyData[channelIndex];
+
+
+    list.push({
+      time: time,
+      value: value
+    });
+
+
+    /*
+       1시간보다 오래된 데이터 제거
+    */
+
+    const cutoff =
+      time.getTime() -
+      HISTORY_DURATION;
+
+
+    while (
+      list.length > 0 &&
+      list[0].time.getTime() < cutoff
+    ) {
+
+      list.shift();
+
+    }
+
+
+    /*
+       안전장치
+       최대 180개
+    */
+
+    while (
+      list.length > MAX_POINTS
+    ) {
+
+      list.shift();
+
+    }
+
+  }
+
+
+  /* =====================================================
+     시간 표시
+  ====================================================== */
+
+  function formatTime(date) {
+
+    return date.toLocaleTimeString(
+      'ko-KR',
+      {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }
+    );
+
+  }
+
+
+  /* =====================================================
+     Chart.js 공통 설정
+  ====================================================== */
+
+  function getCommonChartOptions() {
+
+    return {
+
+      responsive: true,
+
+      maintainAspectRatio: false,
+
+      animation: false,
+
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+
+      plugins: {
+
+        legend: {
+          labels: {
+            color: '#dddddd',
+            usePointStyle: true,
+            boxWidth: 8
+          }
+        },
+
+        tooltip: {
+
+          callbacks: {
+
+            label: function(context) {
+
+              const value =
+                context.parsed.y ?? 0;
+
+              return (
+                `${context.dataset.label}: ` +
+                `${value.toLocaleString('ko-KR')}명`
+              );
+
+            }
+
+          }
+
+        }
+
+      },
+
+      scales: {
+
+        x: {
+
+          ticks: {
+            color: '#aaaaaa',
+            maxTicksLimit: 7
+          },
+
+          grid: {
+            color: 'rgba(255,255,255,0.07)'
+          },
+
+          title: {
+            display: true,
+            text: '시간',
+            color: '#bbbbbb'
+          }
+
+        },
+
+        y: {
+
+          ticks: {
+
+            color: '#aaaaaa',
+
+            callback: function(value) {
+
+              return Number(value)
+                .toLocaleString('ko-KR');
+
+            }
+
+          },
+
+          grid: {
+            color: 'rgba(255,255,255,0.08)'
+          },
+
+          title: {
+            display: true,
+            text: '동접자 수',
+            color: '#bbbbbb'
+          }
+
+        }
+
+      }
+
+    };
+
+  }
+
+
+  /* =====================================================
+     그래프 생성
+  ====================================================== */
+
+  function createCharts() {
+
+    /*
+       한국경제TV 단독
+    */
+
+    const ctx1 =
+      document
+        .getElementById(
+          'hankyungChart'
+        )
+        .getContext('2d');
+
+
+    hankyungChart =
+      new Chart(
+        ctx1,
+        {
+
+          type: 'line',
+
+          data: {
+
+            labels: [],
+
+            datasets: [
+
+              {
+                label: '한국경제TV',
+                data: [],
+
+                borderColor: '#62e98b',
+                backgroundColor:
+                  'rgba(98,233,139,0.10)',
+
+                borderWidth: 2,
+
+                pointRadius: 2,
+                pointHoverRadius: 5,
+
+                tension: 0.2,
+
+                fill: true
+              }
+
+            ]
+
+          },
+
+          options:
+            getCommonChartOptions()
+
+        }
+      );
+
+
+    /*
+       3개 채널 통합
+    */
+
+    const ctx2 =
+      document
+        .getElementById(
+          'combinedChart'
+        )
+        .getContext('2d');
+
+
+    combinedChart =
+      new Chart(
+        ctx2,
+        {
+
+          type: 'line',
+
+          data: {
+
+            labels: [],
+
+            datasets: [
+
+              {
+                label: '한국경제TV',
+                data: [],
+
+                borderColor: '#62e98b',
+                backgroundColor:
+                  '#62e98b',
+
+                borderWidth: 2,
+
+                pointRadius: 2,
+
+                tension: 0.2,
+
+                fill: false
+              },
+
+              {
+                label: 'MTN',
+                data: [],
+
+                borderColor: '#4d8cff',
+                backgroundColor:
+                  '#4d8cff',
+
+                borderWidth: 2,
+
+                pointRadius: 2,
+
+                tension: 0.2,
+
+                fill: false
+              },
+
+              {
+                label: '매일경제TV',
+                data: [],
+
+                borderColor: '#ff934d',
+                backgroundColor:
+                  '#ff934d',
+
+                borderWidth: 2,
+
+                pointRadius: 2,
+
+                tension: 0.2,
+
+                fill: false
+              }
+
+            ]
+
+          },
+
+          options:
+            getCommonChartOptions()
+
+        }
+      );
+
+  }
+
+
+  /* =====================================================
+     그래프 갱신
+  ====================================================== */
+
+  function refreshCharts() {
+
+    if (
+      !hankyungChart ||
+      !combinedChart
+    ) {
+
+      return;
+
+    }
+
+
+    refreshHankyungChart();
+
+    refreshCombinedChart();
+
+  }
+
+
+  /* =====================================================
+     한국경제TV 단독 그래프
+
+     Y축:
+     현재 동접자 -1000
+        ~
+     현재 동접자 +1000
+  ====================================================== */
+
+  function refreshHankyungChart() {
+
+    const list =
+      historyData[0];
+
+
+    if (list.length === 0) {
+
+      return;
+
+    }
+
+
+    const current =
+      list[list.length - 1].value;
+
+
+    /*
+       현재값 ±1000
+
+       동접자 자체가 음수가 될 수 없으므로
+       하한은 0으로 제한
+    */
+
+    const yMin =
+      Math.max(
+        0,
+        current - 1000
+      );
+
+
+    const yMax =
+      current + 1000;
+
+
+    hankyungChart.data.labels =
+      list.map(
+        item => formatTime(item.time)
+      );
+
+
+    hankyungChart
+      .data
+      .datasets[0]
+      .data =
+        list.map(
+          item => item.value
+        );
+
+
+    hankyungChart
+      .options
+      .scales
+      .y
+      .min =
+        yMin;
+
+
+    hankyungChart
+      .options
+      .scales
+      .y
+      .max =
+        yMax;
+
+
+    hankyungChart.update('none');
+
+
+    /*
+       현재 동접자 표시
+    */
+
+    const currentText =
+      document.getElementById(
+        'hankyungCurrent'
+      );
+
+
+    currentText.textContent =
+      `현재 ` +
+      `${current.toLocaleString('ko-KR')}명 ` +
+      `(±1,000)`;
+
+  }
+
+
+  /* =====================================================
+     3개 채널 통합 그래프
+  ====================================================== */
+
+  function refreshCombinedChart() {
+
+    /*
+       시간축 기준은
+       한국경제TV 데이터 시간을 사용
+
+       세 채널을 같은 API 호출에서
+       동시에 가져오므로 거의 동일한 시간
+    */
+
+    const base =
+      historyData[0];
+
+
+    if (base.length === 0) {
+
+      return;
+
+    }
+
+
+    combinedChart.data.labels =
+      base.map(
+        item => formatTime(item.time)
+      );
+
+
+    /*
+       채널별 값
+    */
+
+    combinedChart
+      .data
+      .datasets[0]
+      .data =
+        historyData[0].map(
+          item => item.value
+        );
+
+
+    combinedChart
+      .data
+      .datasets[1]
+      .data =
+        historyData[1].map(
+          item => item.value
+        );
+
+
+    combinedChart
+      .data
+      .datasets[2]
+      .data =
+        historyData[2].map(
+          item => item.value
+        );
+
+
+    /*
+       통합 그래프 Y축은 자동
+    */
+
+    delete combinedChart
+      .options
+      .scales
+      .y
+      .min;
+
+
+    delete combinedChart
+      .options
+      .scales
+      .y
+      .max;
+
+
+    combinedChart.update('none');
+
+  }
 
 </script>
 
